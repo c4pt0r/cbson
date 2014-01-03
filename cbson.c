@@ -106,6 +106,17 @@ read_int32(bson_iter_t* it) {
     return (int32_t)v;
 }
 
+static inline int64_t
+read_int64(bson_iter_t* it) {
+    const uint8_t * b = it->ptr;
+    uint32_t lo = b[0] | b[1]<<8 | b[2]<<16 | b[3]<<24;
+    uint32_t hi = b[4] | b[5]<<8 | b[6]<<16 | b[7]<<24;
+    uint64_t v = (uint64_t)lo | (uint64_t)hi<<32;
+    it->ptr += 8;
+    it->size -= 8;
+    return (int64_t)v;
+}
+
 static inline uint8_t
 read_byte(bson_iter_t* it) {
     const uint8_t* b = it->ptr;
@@ -114,19 +125,35 @@ read_byte(bson_iter_t* it) {
     return *b;
 }
 
-bson_iter_t*
-bson_doc_iter_new(const uint8_t* b) {
-    const uint32_t* data = (const uint32_t*)b;
-    bson_iter_t* ret = malloc(sizeof(bson_iter_t));
-    memset(ret, 0, sizeof(*ret));
-    ret->ptr = b;
-    ret->size = *data;
-    return ret;
+const char*
+read_key(bson_iter_t* it, bson_type* type) {
+    *type = read_byte(it);
+    char* p = (char*)it->ptr;
+    while(*(it->ptr++))
+        it->size--;
+    return p;
 }
 
-void bson_doc_iter_release(bson_iter_t** it) {
-    free(*it);
-    *it = NULL;
+const char*
+read_string_val(bson_iter_t* it) {
+    int32_t sz = read_int32(it);
+    const char* p = (const char*)it->ptr;
+    it->ptr += sz;
+    it->size += sz;
+    return p;
+}
+
+const char*
+bson_read_string(const uint8_t* doc, const char* key) {
+    const uint32_t* data = (const uint32_t*)doc;
+    bson_iter_t it = {doc, *data};
+    bson_type type;
+    while(it.size > 0) {
+        if (strcmp(read_key(&it, &type), key) == 0) {
+            return read_string_val(&it);
+        }
+    }
+    return NULL;
 }
 
 int main() {
@@ -139,9 +166,7 @@ int main() {
     bson_write_uint32_with_offset(b, b->size - offset, offset);
     printf("size: %zu\n", b->size);
     hex_dump("dump:", b->bytes, b->size);
-    bson_iter_t* it = bson_doc_iter_new(b->bytes);
-    int32_t length = read_int32(it);
-    uint8_t type = read_byte(it);
-    printf("length: %zu %02x\n", length, type);
+    const char* v = bson_read_string(b->bytes, "hello");
+    printf("key: %s value: %s \n", "hello", v);
 
 }

@@ -42,8 +42,8 @@ typedef struct _bson_iter_t {
     size_t size;
 } bson_iter_t;
 
-cbson_read_result_t
-bson_read_string(bson_iter_t* doc, const char* key, char* buf, size_t sz);
+const char*
+bson_read_string(const uint8_t* doc, const char* key);
 
 cbson_read_result_t
 bson_read_int32(bson_iter_t* doc, const char* key, int32_t** u);
@@ -59,9 +59,6 @@ bson_read_doc(bson_iter_t* doc, const char* key, uint8_t** out_doc);
 
 void bson_pack_begin(bson_obj_t* b);
 void bson_pack_end(bson_obj_t* b);
-
-bson_iter_t* bson_doc_iter_new(const uint8_t* b);
-void bson_doc_iter_release(bson_iter_t** it);
 
 #endif
 
