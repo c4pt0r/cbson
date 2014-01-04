@@ -1,4 +1,5 @@
 cbson
 =====
 
-yet another C bson sdk for human
+yet another C bson impl
+
